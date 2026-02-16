@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>過年搶獎金</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            margin-top: 30px;
+            font-size: 2.5em;
+            text-shadow: 0 0 20px rgba(255, 200, 0, 0.5);
+            background: linear-gradient(to right, #ffd700, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            margin: 10px 0 5px;
+            font-size: 1.1em;
+            opacity: 0.7;
+        }
+
+        .question-counter {
+            margin: 10px 0;
+            font-size: 1.3em;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 25px;
+            border-radius: 20px;
+        }
+
+        /* 轉盤區域 */
+        .wheel-container {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.5em;
+            z-index: 10;
+            filter: drop-shadow(0 0 5px rgba(255,0,0,0.7));
+        }
+
+        canvas#wheel {
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(255, 200, 0, 0.4), 0 0 60px rgba(255, 100, 100, 0.2);
+        }
+
+        .spin-btn {
+            margin: 15px 0;
+            padding: 15px 50px;
+            font-size: 1.4em;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #ffd700, #ff6b6b);
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 3px;
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+            transition: all 0.3s;
+        }
+
+        .spin-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 30px rgba(255, 107, 107, 0.6);
+        }
+
+        .spin-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 跑馬燈題目區域 */
+        .slot-area {
+            display: none;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px;
+            max-width: 650px;
+            width: 90%;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.15);
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 8px 25px;
+            border-radius: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .cat-math { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+        .cat-english { background: linear-gradient(135deg, #4ecdc4, #44bd9e); }
+        .cat-chinese { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+
+        /* 跑馬燈視窗 */
+        .slot-window {
+            position: relative;
+            height: 80px;
+            overflow: hidden;
+            margin: 20px 0;
+            border-radius: 15px;
+            background: rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .slot-window::before,
+        .slot-window::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 25px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .slot-window::before {
+            top: 0;
+            background: linear-gradient(to bottom, rgba(15,12,41,0.9), transparent);
+        }
+
+        .slot-window::after {
+            bottom: 0;
+            background: linear-gradient(to top, rgba(15,12,41,0.9), transparent);
+        }
+
+        .slot-track {
+            position: absolute;
+            width: 100%;
+            transition: none;
+        }
+
+        .slot-item {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            padding: 10px 20px;
+            color: #fff;
+        }
+
+        .slot-item.active {
+            background: rgba(255, 215, 0, 0.15);
+            border-top: 2px solid rgba(255, 215, 0, 0.5);
+            border-bottom: 2px solid rgba(255, 215, 0, 0.5);
+        }
+
+        .stop-btn {
+            padding: 14px 45px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            letter-spacing: 2px;
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+            animation: glowPulse 1s infinite;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4); }
+            50% { box-shadow: 0 5px 30px rgba(255, 107, 107, 0.8); }
+        }
+
+        .stop-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* 最終題目顯示 */
+        .final-question {
+            display: none;
+            margin-top: 20px;
+            padding: 25px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            font-size: 1.5em;
+            line-height: 1.8;
+            animation: fadeIn 0.5s;
+        }
+
+        .next-btn {
+            margin-top: 20px;
+            padding: 14px 45px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            letter-spacing: 2px;
+            display: none;
+        }
+
+        .next-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(108, 92, 231, 0.5);
+        }
+
+        /* 全部出完畫面 */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .overlay.show {
+            display: flex;
+        }
+
+        .final-result {
+            text-align: center;
+            animation: fadeIn 0.5s;
+        }
+
+        .final-result h2 {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+
+        .final-result p {
+            font-size: 1.5em;
+            margin: 10px 0;
+        }
+
+        .restart-btn {
+            margin-top: 25px;
+            padding: 15px 50px;
+            font-size: 1.3em;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #ffd700, #ff6b6b);
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+
+<h1>🧧 過年搶獎金</h1>
+<p class="subtitle">轉動轉盤選科目，再按停止選題目！</p>
+
+<div class="question-counter">
+    📝 第 <b id="qcount">1</b> 題 / 共 <b id="qtotal">22</b> 題
+</div>
+
+<div class="wheel-container">
+    <div class="wheel-pointer">🔻</div>
+    <canvas id="wheel" width="320" height="320"></canvas>
+</div>
+
+<button class="spin-btn" id="spinBtn" onclick="spinWheel()">🎰 轉動轉盤！</button>
+
+<!-- 跑馬燈選題區 -->
+<div class="slot-area" id="slotArea">
+    <div class="category-badge" id="catBadge">數學</div>
+    <div class="slot-window">
+        <div class="slot-track" id="slotTrack"></div>
+    </div>
+    <button class="stop-btn" id="stopBtn" onclick="stopSlot()">🛑 停！</button>
+    <div class="final-question" id="finalQuestion"></div>
+    <button class="next-btn" id="nextBtn" onclick="nextRound()">下一題 ➜</button>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="final-result">
+        <h2>🎉</h2>
+        <p>所有題目都出完了！</p>
+        <p style="font-size:1.1em; opacity:0.8;">你們太厲害了！</p>
+        <button class="restart-btn" onclick="restartGame()">🔄 再玩一次</button>
+    </div>
+</div>
+
+<script>
+// ========== 題庫（來自 Word 檔） ==========
+const questions = {
+    math: [
+        "過年蓁蓁收到3600元紅包，她想要一台5006元的腳踏車，請問她還要存多少錢？",
+        "請問1/2、3/4、1/3排出大小順序？",
+        "請問1公斤的石頭跟1公斤的棉花誰比較重？",
+        "請問划船渡河，一艘船可以坐4個人，如果有16個人，要划幾趟大家才能順利過河？",
+        "蓁蓁跟同學去尋寶，發現山洞裡有一排數字似乎有一些規律『1、 1、 2、 3、 5、 8、？』但最後一個問號數字看不清楚，請問它可能是什麼數字？",
+        "蓁蓁買了6包餅乾，1包裡有6片餅乾，班上有9個同學，請問一人可以均分幾片？",
+        "減法算式，被減數減去8，減數加10，得到的差為32，請問原本的差為多少？",
+        "10 – 2＊3＝？"
+    ],
+    english: [
+        "請說出26個字母發音",
+        "請寫出現在時鐘時間英文",
+        "拿3個骰子，骰出3個數字並寫出他們的英文！",
+        "請寫出『青蛙』跟『椅子』的英文單字",
+        "請用2句英文句子，形容妳自己！",
+        "請寫出有『oo』的2個單字，例如『tool』",
+        "出國遇到外國人，說2句英文句子！"
+    ],
+    chinese: [
+        "請說出5個『4字成語』",
+        "請寫出5個字裡有『虫』",
+        "請寫出5個字裡有『門』",
+        "請說出這5個字部首『者』、『臣』、『幸』、『腿』、『鼓』",
+        "請寫出『ㄒㄧㄤˋ』片、畫『ㄒㄧㄤˋ』、大『ㄒㄧㄤˋ』",
+        "請寫出『ㄐㄧˋ』得、『ㄐㄧˋ』節、『ㄐㄧˋ』念",
+        "請自己接龍3個詞語，例如『方向』>『向心力』>『力氣』"
+    ]
+};
+
+const TOTAL_QUESTIONS = questions.math.length + questions.english.length + questions.chinese.length;
+
+// ========== 遊戲狀態 ==========
+let questionCount = 0;
+let currentCategory = '';
+let usedQuestions = { math: [], english: [], chinese: [] };
+let isSpinning = false;
+let slotRunning = false;
+let slotAnimId = null;
+let slotPool = [];
+let slotPosition = 0;
+
+document.getElementById('qtotal').textContent = TOTAL_QUESTIONS;
+
+// ========== 轉盤繪製 ==========
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const segments = [
+    { label: '數學', color: '#ff6b6b', cat: 'math' },
+    { label: '英文', color: '#4ecdc4', cat: 'english' },
+    { label: '國語', color: '#a29bfe', cat: 'chinese' },
+];
+let wheelAngle = 0;
+
+function drawWheel(angle) {
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const r = cx - 10;
+    const segAngle = (2 * Math.PI) / segments.length;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    segments.forEach((seg, i) => {
+        const startAngle = angle + i * segAngle;
+        const endAngle = startAngle + segAngle;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = seg.color;
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(startAngle + segAngle / 2);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px Microsoft JhengHei, sans-serif';
+        ctx.fillText(seg.label, r * 0.55, 8);
+        ctx.restore();
+    });
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 22, 0, 2 * Math.PI);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 18, 0, 2 * Math.PI);
+    ctx.fillStyle = '#24243e';
+    ctx.fill();
+}
+
+drawWheel(0);
+
+// ========== 轉盤旋轉 ==========
+function spinWheel() {
+    if (isSpinning) return;
+
+    const allDone = Object.keys(questions).every(cat =>
+        usedQuestions[cat].length >= questions[cat].length
+    );
+    if (allDone) {
+        document.getElementById('overlay').classList.add('show');
+        return;
+    }
+
+    isSpinning = true;
+    document.getElementById('spinBtn').disabled = true;
+    document.getElementById('slotArea').style.display = 'none';
+
+    const spinDuration = 3000 + Math.random() * 1000;
+    const totalRotation = (5 + Math.random() * 5) * 2 * Math.PI;
+    const startTime = performance.now();
+    const startAngle = wheelAngle;
+
+    function animate(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / spinDuration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        wheelAngle = startAngle + totalRotation * ease;
+        drawWheel(wheelAngle);
+
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            isSpinning = false;
+            const segAngle = (2 * Math.PI) / segments.length;
+            const normalizedAngle = ((wheelAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+            const pointerAngle = (3 * Math.PI / 2 - normalizedAngle + 2 * Math.PI) % (2 * Math.PI);
+            let segIndex = Math.floor(pointerAngle / segAngle) % segments.length;
+
+            let cat = segments[segIndex].cat;
+            if (usedQuestions[cat].length >= questions[cat].length) {
+                const available = Object.keys(questions).filter(c =>
+                    usedQuestions[c].length < questions[c].length
+                );
+                if (available.length > 0) {
+                    cat = available[Math.floor(Math.random() * available.length)];
+                } else {
+                    document.getElementById('overlay').classList.add('show');
+                    return;
+                }
+            }
+
+            currentCategory = cat;
+            startSlot();
+        }
+    }
+
+    requestAnimationFrame(animate);
+}
+
+// ========== 跑馬燈 ==========
+function startSlot() {
+    const pool = questions[currentCategory];
+    const available = pool.map((_, i) => i).filter(i => !usedQuestions[currentCategory].includes(i));
+
+    if (available.length === 0) return;
+
+    // 建立跑馬燈的題目列表（用可用的題目重複填滿）
+    slotPool = available;
+
+    // 更新 UI
+    const badge = document.getElementById('catBadge');
+    const catNames = { math: '數學', english: '英文', chinese: '國語' };
+    const catClasses = { math: 'cat-math', english: 'cat-english', chinese: 'cat-chinese' };
+    badge.textContent = catNames[currentCategory];
+    badge.className = 'category-badge ' + catClasses[currentCategory];
+
+    // 建立跑馬燈項目（重複多次讓它看起來在滾動）
+    const track = document.getElementById('slotTrack');
+    track.innerHTML = '';
+    const repeatCount = 50; // 重複多次確保夠長
+    for (let r = 0; r < repeatCount; r++) {
+        for (let i = 0; i < slotPool.length; i++) {
+            const div = document.createElement('div');
+            div.className = 'slot-item';
+            div.textContent = pool[slotPool[i]];
+            track.appendChild(div);
+        }
+    }
+
+    // 顯示跑馬燈，隱藏結果
+    document.getElementById('finalQuestion').style.display = 'none';
+    document.getElementById('nextBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'inline-block';
+    document.getElementById('slotArea').style.display = 'block';
+
+    // 開始滾動
+    slotPosition = 0;
+    slotRunning = true;
+    const speed = 8; // 每幀移動的像素
+
+    function animateSlot() {
+        if (!slotRunning) return;
+        slotPosition += speed;
+        track.style.transform = `translateY(-${slotPosition}px)`;
+        slotAnimId = requestAnimationFrame(animateSlot);
+    }
+
+    slotAnimId = requestAnimationFrame(animateSlot);
+}
+
+function stopSlot() {
+    if (!slotRunning) return;
+    slotRunning = false;
+    cancelAnimationFrame(slotAnimId);
+
+    const track = document.getElementById('slotTrack');
+    const itemHeight = 80;
+    const totalItems = slotPool.length;
+
+    // 計算目前停在哪一個項目
+    const currentIdx = Math.floor(slotPosition / itemHeight) % totalItems;
+    const selectedPoolIdx = slotPool[currentIdx];
+
+    // 加入緩停動畫：再滾幾格後停下
+    const extraItems = 5 + Math.floor(Math.random() * 5);
+    const targetPosition = (Math.floor(slotPosition / itemHeight) + extraItems) * itemHeight;
+    const startPos = slotPosition;
+    const distance = targetPosition - startPos;
+    const duration = 1500;
+    const startTime = performance.now();
+
+    function easeStop(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const pos = startPos + distance * ease;
+        track.style.transform = `translateY(-${pos}px)`;
+
+        if (progress < 1) {
+            requestAnimationFrame(easeStop);
+        } else {
+            // 停下來了，決定最終題目
+            const finalIdx = Math.floor(targetPosition / itemHeight) % totalItems;
+            const finalPoolIdx = slotPool[finalIdx];
+
+            // 標記已使用
+            usedQuestions[currentCategory].push(finalPoolIdx);
+            questionCount++;
+            document.getElementById('qcount').textContent = questionCount;
+
+            // 高亮停下的項目
+            const items = track.querySelectorAll('.slot-item');
+            const stopItemIndex = Math.floor(targetPosition / itemHeight);
+            if (items[stopItemIndex]) {
+                items[stopItemIndex].classList.add('active');
+            }
+
+            // 顯示最終題目
+            const finalQ = document.getElementById('finalQuestion');
+            finalQ.textContent = questions[currentCategory][finalPoolIdx];
+            finalQ.style.display = 'block';
+
+            // 隱藏停止按鈕，顯示下一題
+            document.getElementById('stopBtn').style.display = 'none';
+
+            const allDone = Object.keys(questions).every(cat =>
+                usedQuestions[cat].length >= questions[cat].length
+            );
+            const nextBtn = document.getElementById('nextBtn');
+            if (allDone) {
+                nextBtn.textContent = '🎉 結束遊戲';
+                nextBtn.onclick = () => document.getElementById('overlay').classList.add('show');
+            } else {
+                nextBtn.textContent = '下一題 ➜';
+                nextBtn.onclick = nextRound;
+            }
+            nextBtn.style.display = 'inline-block';
+        }
+    }
+
+    requestAnimationFrame(easeStop);
+}
+
+// ========== 下一題 ==========
+function nextRound() {
+    document.getElementById('slotArea').style.display = 'none';
+    document.getElementById('spinBtn').disabled = false;
+}
+
+// ========== 重新開始 ==========
+function restartGame() {
+    questionCount = 0;
+    usedQuestions = { math: [], english: [], chinese: [] };
+    document.getElementById('qcount').textContent = '1';
+    document.getElementById('overlay').classList.remove('show');
+    document.getElementById('slotArea').style.display = 'none';
+    document.getElementById('spinBtn').disabled = false;
+    slotRunning = false;
+    if (slotAnimId) cancelAnimationFrame(slotAnimId);
+}
+</script>
+
+</body>
+</html>
